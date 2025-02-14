@@ -1,61 +1,63 @@
-import openai
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
 
 app = Flask(__name__)
 
-# Store user states (this should be stored in a database for production)
-user_sessions = {}
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    incoming_msg = request.form.get("Body", "").strip().lower()
+    response = MessagingResponse()
+    msg = response.message()
 
-@app.route("/webhook", methods=['POST'])
-def whatsapp_bot():
-    incoming_msg = request.values.get('Body', '').strip().lower()
-    sender_number = request.values.get('From')  # Unique identifier for users
-    resp = MessagingResponse()
-    msg = resp.message()
-
-    # Check if user exists in session
-    if sender_number not in user_sessions:
-        user_sessions[sender_number] = {"step": "menu"}  # Start at menu
-
-    step = user_sessions[sender_number]["step"]
-
-    # Greet user and show menu if they send "hello"
-    if step == "menu" and incoming_msg in ["hello", "hi"]:
-        response_text = (
-            "Hello! Welcome to Rhino Mabati. How can we assist you today?\n\n"
-            "1️⃣ Profile\n"
-            "2️⃣ Products\n"
-            "3️⃣ Pricing\n"
-            "4️⃣ Order Process\n"
-            "5️⃣ Contact Us\n"
-            "Reply with a number to choose an option."
+    if incoming_msg in ["hello", "hi"]:
+        msg.body(
+            "Welcome to Rhino Mabati! Please choose an option:\n"
+            "1️⃣ Types of Roofing Sheets\n"
+            "2️⃣ Available Colors\n"
+            "3️⃣ Pricing & Delivery"
         )
-        user_sessions[sender_number]["step"] = "waiting_for_choice"
 
-    elif step == "waiting_for_choice":
-        if incoming_msg == "1":
-            response_text = "📌 *Profile*\nRhino Mabati is a leading supplier of high-quality roofing materials..."
-        elif incoming_msg == "2":
-            response_text = "🏠 *Products*\nWe offer different types of mabati including corrugated, tile, and box profiles."
-        elif incoming_msg == "3":
-            response_text = "💰 *Pricing*\nOur pricing depends on size and type. Please visit our website for a full catalog."
-        elif incoming_msg == "4":
-            response_text = "🛒 *Order Process*\nTo place an order, visit our website or call us at +2547XXXXXXX."
-        elif incoming_msg == "5":
-            response_text = "📞 *Contact Us*\nYou can reach us via WhatsApp, email, or call: +2547XXXXXXX."
-        else:
-            response_text = "⚠️ Invalid choice. Please reply with a number (1-5)."
+    elif incoming_msg == "1":
+        msg.body(
+            "We offer the following roofing sheets:\n"
+            "1️⃣ Germania\n"
+            "2️⃣ Romania\n"
+            "3️⃣ Brit\n"
+            "4️⃣ Orientile\n"
+            "5️⃣ Jamii Max\n"
+            "6️⃣ Corrugated"
+        )
 
-        # After responding, send them back to menu
-        response_text += "\n\nType *hello* to return to the main menu."
-        user_sessions[sender_number]["step"] = "menu"
+    elif incoming_msg == "2":
+        msg.body(
+            "Available colors:\n"
+            "🎨 Charcoal Grey\n"
+            "🎨 Blue\n"
+            "🎨 Maroon\n"
+            "🎨 Brick Red\n"
+            "🎨 Wood Effect"
+        )
+
+    elif incoming_msg == "3":
+        msg.body(
+            "Pricing & Delivery:\n\n"
+            "🔹 *Matte Finish*\n"
+            "G28: Ksh 745 (Self Collection) | Ksh 745 (Delivery)\n"
+            "G30: Ksh 600 (Self Collection) | Ksh 680 (Delivery)\n\n"
+            "🔹 *Glossy Finish*\n"
+            "G28: Ksh 625 (Self Collection) | Ksh 680 (Delivery)\n"
+            "G30: Ksh 500 (Self Collection) | Ksh 575 (Delivery)"
+        )
 
     else:
-        response_text = "I didn't understand that. Type *hello* to start over."
+        msg.body(
+            "Sorry, I didn't understand that. Please reply with:\n"
+            "1️⃣ Types of Roofing Sheets\n"
+            "2️⃣ Available Colors\n"
+            "3️⃣ Pricing & Delivery"
+        )
 
-    msg.body(response_text)
-    return str(resp)
+    return str(response)
 
 if __name__ == "__main__":
     app.run(debug=True)
