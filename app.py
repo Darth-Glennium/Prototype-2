@@ -1,35 +1,60 @@
+import openai
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
 
 app = Flask(__name__)
 
-# Dictionary of predefined questions and answers for a roofing company
-qa_pairs = {
-    "hello": "Hello! Welcome to Rhino Mabati. How can we assist you today?",
-    "do you sell mabati": "Yes, we sell high-quality roofing sheets. What type are you looking for?",
-    "what types of mabati do you have": "We have corrugated sheets, box profile, tile profile, and polycarbonate sheets.",
-    "do you offer free delivery": "We offer free delivery within selected areas. Please share your location to confirm.",
-    "how much does a mabati sheet cost": "Prices vary depending on type and size. Please specify the mabati type and length.",
-    "what sizes of mabati do you have": "We offer sheets in sizes from 2 meters to 12 meters. Custom sizes are also available.",
-    "where is your company located": "We are located at [Company Address]. You can visit us or order online.",
-    "how do i place an order": "You can order through our website, WhatsApp, or by calling us at [Phone Number].",
-    "do you offer installation services": "Yes, we offer professional installation services. Let us know your location for a quote.",
-    "do you have a warranty": "Yes! Our mabati sheets come with a [X-year] warranty against rust and corrosion.",
-    "what colors do you have": "Our mabati comes in red, blue, green, charcoal, and more! Let us know your preference.",
-    "can i get a quotation": "Sure! Please provide the type, size, and quantity of mabati sheets you need.",
-    "bye": "Thank you for reaching out to Rhino Mabati. Have a great day!",
-}
+# Store user states (this should be stored in a database for production)
+user_sessions = {}
 
 @app.route("/webhook", methods=['POST'])
 def whatsapp_bot():
-    incoming_msg = request.values.get('Body', '').lower()
+    incoming_msg = request.values.get('Body', '').strip().lower()
+    sender_number = request.values.get('From')  # Unique identifier for users
     resp = MessagingResponse()
     msg = resp.message()
 
-    # Check if the incoming message matches a predefined question
-    response = qa_pairs.get(incoming_msg, "I'm sorry, I didn't understand that. Can you please rephrase?")
-    
-    msg.body(response)
+    # Check if user exists in session
+    if sender_number not in user_sessions:
+        user_sessions[sender_number] = {"step": "menu"}  # Start at menu
+
+    step = user_sessions[sender_number]["step"]
+
+    # Greet user and show menu if they send "hello"
+    if step == "menu" and incoming_msg in ["hello", "hi"]:
+        response_text = (
+            "Hello! Welcome to Rhino Mabati. How can we assist you today?\n\n"
+            "1️⃣ Profile\n"
+            "2️⃣ Products\n"
+            "3️⃣ Pricing\n"
+            "4️⃣ Order Process\n"
+            "5️⃣ Contact Us\n"
+            "Reply with a number to choose an option."
+        )
+        user_sessions[sender_number]["step"] = "waiting_for_choice"
+
+    elif step == "waiting_for_choice":
+        if incoming_msg == "1":
+            response_text = "📌 *Profile*\nRhino Mabati is a leading supplier of high-quality roofing materials..."
+        elif incoming_msg == "2":
+            response_text = "🏠 *Products*\nWe offer different types of mabati including corrugated, tile, and box profiles."
+        elif incoming_msg == "3":
+            response_text = "💰 *Pricing*\nOur pricing depends on size and type. Please visit our website for a full catalog."
+        elif incoming_msg == "4":
+            response_text = "🛒 *Order Process*\nTo place an order, visit our website or call us at +2547XXXXXXX."
+        elif incoming_msg == "5":
+            response_text = "📞 *Contact Us*\nYou can reach us via WhatsApp, email, or call: +2547XXXXXXX."
+        else:
+            response_text = "⚠️ Invalid choice. Please reply with a number (1-5)."
+
+        # After responding, send them back to menu
+        response_text += "\n\nType *hello* to return to the main menu."
+        user_sessions[sender_number]["step"] = "menu"
+
+    else:
+        response_text = "I didn't understand that. Type *hello* to start over."
+
+    msg.body(response_text)
     return str(resp)
 
 if __name__ == "__main__":
