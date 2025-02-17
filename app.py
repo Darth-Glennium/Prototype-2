@@ -11,7 +11,7 @@ def webhook():
 
     if incoming_msg in ["hello", "hi"]:
         msg.body(
-            "Welcome to Rhino Mabati! Please choose an option:\n"
+            "Welcome to Rhinoo Mabati! Please choose an option:\n"
             "1️⃣ Types of Roofing Sheets\n"
             "2️⃣ Available Colors\n"
             "3️⃣ Pricing & Delivery"
